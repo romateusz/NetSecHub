@@ -19,7 +19,7 @@
 Projekt zarządza zależnościami za pomocą nowoczesnego menedżera pakietów **uv**. Dzięki temu start aplikacji jest bardzo prosty.
 
 ```bash
-git clone [https://github.com/romateusz/NetSecHub.git](https://github.com/romateusz/NetSecHub.git)
+git clone https://github.com/romateusz/NetSecHub.git
 cd NetSecHub
 ```
 
@@ -27,7 +27,7 @@ cd NetSecHub
 Instalacja uv (jeśli nie jest zainstalowane)
 
 ```bash
-curl -LsSf [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) | sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 Należy również dodać uprawnienia do skryptu:
 
@@ -44,7 +44,7 @@ Uruchomienie aplikacji:
 Instalacja uv (jeśli nie posiadasz):
 
 ```PowerShell
-powershell -c "irm [https://astral.sh/uv/install.ps1](https://astral.sh/uv/install.ps1) | iex"
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 Odblokowanie skryptów (jeśli to Twoje pierwsze uruchomienie skryptu .ps1):
@@ -60,35 +60,16 @@ Uruchomienie: Wpisz poniższą komendę lub kliknij prawym przyciskiem myszy na 
 ```
 
 ## Dostęp do aplikacji
-Po poprawnym uruchomieniu skryptu, dashboard będzie dostępny w przeglądarce pod adresem: http://localhost:8222
+Po poprawnym uruchomieniu skryptu, aplikacja będzie dostępna w przeglądarce pod adresem: http://localhost:8222
 
 
-## MIT License
+## Licencja
 
-Copyright (c) 2025 Mateusz Roman
+Projekt jest udostępniony na licencji MIT – szczegóły znajdują się w pliku [LICENSE](LICENSE).
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 
 ## Zastrzeżenie prawne
 
-To narzędzie zostało stworzone wyłącznie do **legalnych i etycznych testów
-bezpieczeństwa**, analiz OSINT oraz celów edukacyjnych.
+To narzędzie zostało stworzone wyłącznie do **legalnych i etycznych testów bezpieczeństwa**, analiz OSINT oraz celów edukacyjnych.
 
-Autor nie ponosi odpowiedzialności za niewłaściwe lub nielegalne użycie
-oprogramowania.
+Autor nie ponosi odpowiedzialności za niewłaściwe lub nielegalne użycie oprogramowania.
