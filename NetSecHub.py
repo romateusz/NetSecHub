@@ -26,10 +26,10 @@ st.markdown("""
 
     /* Efekt po najechaniu myszką (Hover) */
     div[data-testid="stLinkButton"] a:hover {
-        background-color: #000080 !important;
+        background-color: #0F2866 !important;
         color: #ffffff !important;
-        transform: scale(1.1);
-        border: 1px solid #000080;
+        transform: scale(1.02);
+        border: 1.5px solid #ffffff;
         z-index: 10;
     }
     </style>
@@ -138,6 +138,14 @@ TOOLS_DB = {
     ]
 }
 
+
+section_emoji = {
+    "🔍 DNS & Whois": "🔍",
+    "🦠 Threat Intelligence": "🦠",
+    "📡 Skanowanie i Techniczne": "📡",
+    "🏢 Rejestry Internetowe (RIR)": "🏢",
+}
+
 # ======================
 # INTERFEJS UŻYTKOWNIKA
 # ======================
@@ -192,7 +200,7 @@ else:
         input_domain = raw_domain.replace("https://", "").replace("http://", "").split("/")[0]
 
     st.markdown("---")
-    st.subheader(f"Dostępne narzędzia w sekcji: {selected_section}")
+    st.subheader(f"Dostępne narzędzia w wybranej sekcji:")
 
     # Iteracja po narzędziach i wyświetlanie interfejsu
     tools_list = TOOLS_DB[selected_section]
@@ -204,7 +212,7 @@ else:
             col_desc, col_preview, col_action = st.columns([3, 4, 1.5])
 
             with col_desc:
-                st.markdown(f"### 🛠️ {tool['name']}")
+                st.markdown(f"### {section_emoji[selected_section]} {tool['name']}")
                 st.caption(tool['desc'])
                 # Informacja, jakiego parametru oczekuje narzędzie
                 req_param = tool['param_type']
