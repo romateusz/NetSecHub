@@ -11,6 +11,31 @@ st.set_page_config(
 )
 
 # =====================
+# CSS DLA PRZYCISKÓW
+# =====================
+st.markdown("""
+    <style>
+    /* Styl podstawowy dla link_button */
+    div[data-testid="stLinkButton"] a {
+        background-color: #e0f2f7 !important;
+        color: #000000 !important;
+        border: 1px solid #add8e6;
+        transition: all 0.3s ease-in-out;
+        font-weight: bold;
+    }
+
+    /* Efekt po najechaniu myszką (Hover) */
+    div[data-testid="stLinkButton"] a:hover {
+        background-color: #000080 !important;
+        color: #ffffff !important;
+        transform: scale(1.1);
+        border: 1px solid #000080;
+        z-index: 10;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# =====================
 # BAZA DANYCH NARZĘDZI 
 # =====================
 # Klucz słownika to nazwa sekcji w menu.
@@ -201,7 +226,7 @@ else:
                  generated_url = tool['url_template'].format(input_domain)
                  ready_to_launch = True
             elif tool['param_type'] == 'both':
-                # Dla 'both' priorytet ma IP, jeśli podano oba (można to zmienić według potrzeb)
+                # Dla 'both' priorytet ma IP, jeśli podano oba
                 if input_ip:
                      generated_url = tool['url_template'].format(input_ip)
                      ready_to_launch = True
@@ -223,11 +248,10 @@ else:
                 st.markdown(" ") 
                 st.markdown(" ")
                 
-                # Unikalny klucz potrzebny TYLKO dla zwykłego przycisku
+                # Unikalny klucz potrzebny dla zwykłego przycisku
                 unique_key = f"wait_btn_{tool['name'].replace(' ', '_')}"
 
                 if ready_to_launch and generated_url:
-                    # TUTAJ USUWAMY 'key' - link_button go nie obsługuje
                     st.link_button(
                         "Otwórz ↗️", 
                         generated_url, 
@@ -235,7 +259,6 @@ else:
                         use_container_width=True
                     )
                 else:
-                    # TUTAJ ZOSTAWIAMY 'key' - zwykły button go wymaga w pętli
                     st.button(
                         "Oczekiwanie...", 
                         disabled=True, 
