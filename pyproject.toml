@@ -1,0 +1,18 @@
+[project]
+name = "linksapp"
+version = "0.1.0"
+description = "App with usefull links"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "streamlit>=1.52.2",
+    # "requests>=2.31.0",
+    # "numpy>=2.3.5",
+    # "matplotlib>=3.10.8",
+    # "scipy>=1.16.3",
+]
+
+[dependency-groups]
+dev = [
+    # "ruff>=0.14.10",
+]
