@@ -1,9 +1,29 @@
-Write-Host "--------------------------------------" -ForegroundColor Cyan
-Write-Host " Uruchamiam NetSecHub..."               -ForegroundColor Cyan
-Write-Host "--------------------------------------" -ForegroundColor Cyan
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
-# Uruchomienie aplikacji przez uv
+function Write-Info($msg) {
+    Write-Host "[INFO]  $msg" -ForegroundColor Cyan
+}
+
+function Write-ErrorMsg($msg) {
+    Write-Host "[ERROR] $msg" -ForegroundColor Red
+}
+
+# Sprawdź czy uv jest zainstalowany
+if (!(Get-Command uv -ErrorAction SilentlyContinue)) {
+    Write-ErrorMsg "Narzędzie 'uv' nie jest zainstalowane."
+    Write-Host "Zainstaluj je poleceniem:"
+    Write-Host "  powershell -c `"irm https://astral.sh/uv/install.ps1 | iex`""
+    pause
+    exit 1
+}
+
+# Pierwsze uruchomienie – instalacja zależności
+if (!(Test-Path ".venv")) {
+    Write-Info "Pierwsze uruchomienie – instaluję zależności..."
+    uv sync
+}
+
+# Uruchom aplikację
+Write-Info "Startuję NetSecHub..."
 uv run streamlit run NetSecHub.py
-
-# Zatrzymanie okna po zakończeniu
-Read-Host "Naciśnij Enter, aby zakończyć"
