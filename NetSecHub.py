@@ -1,4 +1,8 @@
+from pathlib import Path
 import streamlit as st
+import sqlite3
+import markdownStyle as mdS
+import DBClient
 
 # =====================
 # KONFIGURACJA STRONY
@@ -10,141 +14,11 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# =====================
-# CSS DLA PRZYCISKÓW
-# =====================
-st.markdown("""
-    <style>
-    /* Styl podstawowy dla link_button */
-    div[data-testid="stLinkButton"] a {
-        background-color: #e0f2f7 !important;
-        color: #000000 !important;
-        border: 1px solid #add8e6;
-        transition: all 0.3s ease-in-out;
-        font-weight: bold;
-    }
+mdS.apply_custom_styles()
 
-    /* Efekt po najechaniu myszką (Hover) */
-    div[data-testid="stLinkButton"] a:hover {
-        background-color: #0F2866 !important;
-        color: #ffffff !important;
-        transform: scale(1.02);
-        border: 1.5px solid #ffffff;
-        z-index: 10;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+DB_PATH = Path("netsechub.db")
+db_client = DBClient.DBClient(DB_PATH)
 
-# =====================
-# BAZA DANYCH NARZĘDZI 
-# =====================
-# Klucz słownika to nazwa sekcji w menu.
-# Wartość to lista narzędzi w tej sekcji.
-# 'url_template': Użyj {}, gdzie ma zostać wstawiony parametr (IP lub Domena)
-# 'param_type': Określa, którego pola wejściowego użyć ('ip', 'domain', lub 'both')
-
-TOOLS_DB = {
-    "🔍 DNS & Whois": [
-        {
-            "name": "DNSDumpster",
-            "desc": "Mapowanie DNS i rekonesans subdomen.",
-            "url_template": "https://dnsdumpster.com/",
-            "param_type": "none",
-        },
-        {
-            "name": "ViewDNS.info",
-            "desc": "Obszerny zestaw narzędzi DNS (Whois, IP History, etc.).",
-            "url_template": "https://viewdns.info/reverseip/?host={}&t=1",
-            "param_type": "both",
-        },
-         {
-            "name": "Who.is",
-            "desc": "Standardowe sprawdzenie WHOIS.",
-            "url_template": "https://who.is/whois/{}",
-            "param_type": "both",
-        },
-    ],
-    "🦠 Threat Intelligence": [
-        {
-            "name": "VirusTotal (Search)",
-            "desc": "Sprawdź reputację IP, domeny lub hasha pliku.",
-            "url_template": "https://www.virustotal.com/gui/search/{}",
-            "param_type": "both",
-        },
-        {
-            "name": "AbuseIPDB",
-            "desc": "Sprawdź zgłoszenia nadużyć dla danego adresu IP.",
-            "url_template": "https://www.abuseipdb.com/check/{}",
-            "param_type": "ip",
-        },
-        {
-            "name": "Cisco Talos Reputation",
-            "desc": "Oficjalne dane o reputacji od Cisco.",
-            "url_template": "https://talosintelligence.com/reputation_center/lookup?search={}",
-            "param_type": "ip",
-        },
-        {
-            "name": "OTX AlienVault",
-            "desc": "Open Threat Exchange - wskaźniki kompromitacji.",
-            "url_template": "https://otx.alienvault.com/indicator/ip/{}",
-            "param_type": "ip",
-        },
-    ],
-    "📡 Skanowanie i Techniczne": [
-        {
-            "name": "Shodan (Host)",
-            "desc": "Wyszukiwarka urządzeń podłączonych do internetu (IoT, serwery).",
-            "url_template": "https://www.shodan.io/host/{}",
-            "param_type": "ip",
-        },
-        {
-            "name": "Censys Search",
-            "desc": "Analiza hostów i certyfikatów.",
-            "url_template": "https://search.censys.io/hosts/{}",
-            "param_type": "ip",
-        },
-        {
-            "name": "SSL Labs Server Test",
-            "desc": "Dogłębna analiza konfiguracji SSL/TLS serwera.",
-            "url_template": "https://www.ssllabs.com/ssltest/analyze.html?d={}&hideResults=on",
-            "param_type": "domain",
-        },
-        {
-            "name": "CRT.sh (Certificate Logs)",
-            "desc": "Wyszukiwanie w logach Certificate Transparency (znajdowanie subdomen).",
-            "url_template": "https://crt.sh/?q={}",
-            "param_type": "domain",
-        }
-    ],
-    "🏢 Rejestry Internetowe (RIR)": [
-        {
-            "name": "RIPE NCC (Europa/Bliski Wschód)",
-            "desc": "Szczegółowe dane o alokacji IP w naszym regionie.",
-            "url_template": "https://apps.db.ripe.net/db-web-ui/query?searchtext={}",
-            "param_type": "ip",
-        },
-        {
-            "name": "ARIN (Ameryka Płn.)",
-            "desc": "Dane WHOIS dla Ameryki Północnej.",
-            "url_template": "https://search.arin.net/rdap/?query={}",
-            "param_type": "ip",
-        },
-         {
-            "name": "BGP Hurricane Electric",
-            "desc": "Świetne narzędzie do analizy tras BGP i powiązań ASN.",
-            "url_template": "https://bgp.he.net/ip/{}",
-            "param_type": "ip",
-        },
-    ]
-}
-
-
-section_emoji = {
-    "🔍 DNS & Whois": "🔍",
-    "🦠 Threat Intelligence": "🦠",
-    "📡 Skanowanie i Techniczne": "📡",
-    "🏢 Rejestry Internetowe (RIR)": "🏢",
-}
 
 # ======================
 # INTERFEJS UŻYTKOWNIKA
@@ -152,14 +26,27 @@ section_emoji = {
 with st.sidebar:
     st.title("🛡️ NetSec Hub")
     st.markdown("---")
-    st.markdown("**Centrum operacyjne** dla sieciowców i bezpieczników.")
-    st.markdown("Wybierz kategorię z menu poniżej.")
     
-    section_options = ["🏠 Landing Page"] + list(TOOLS_DB.keys())
-    selected_section = st.radio("Nawigacja:", section_options)
+    # Pobieramy sekcje z bazy
+    sections = db_client.load_sections()
+    
+    # Tworzymy mapę emoji dla wszystkich opcji
+    full_emoji_map = {s["name"]: s["emoji"] for s in sections}
+    full_emoji_map["Landing Page"] = "🏠"
+    full_emoji_map["Kreator Huba"] = "🧩"
+    
+    # Lista opcji zawiera czyste nazwy
+    clean_options = ["Landing Page"] + [s["name"] for s in sections] + ["Kreator Huba"]
+    
+    selected_section = st.radio(
+        "Nawigacja:", 
+        clean_options, 
+        format_func=lambda x: f"{full_emoji_map.get(x, '📁')} {x}"
+    )
     
     st.markdown("---")
-    st.info("💡 Wskazówka: Linki otwierają się w nowych kartach.")
+    st.info("💡 ***Wskazówka:*** Ctrl + LPM otwiera narzędzia w tle.")
+    
 
 
 # ========================
@@ -167,7 +54,7 @@ with st.sidebar:
 # ========================
 
 # --- LANDING PAGE ---
-if selected_section == "🏠 Landing Page":
+if selected_section == "Landing Page":
     st.title("Witaj w NetSec Hub")
     st.markdown("""
     To narzędzie agreguje przydatne serwisy zewnętrzne służące do analizy sieciowej, 
@@ -178,16 +65,136 @@ if selected_section == "🏠 Landing Page":
     2. **Wpisz parametry** na górze strony (Adres IP lub Domenę).
     3. Przejrzyj listę dostępnych narzędzi.
     4. Kliknij **"Otwórz ↗️"**, aby uruchomić narzędzie z wpisanymi parametrami w nowej karcie.
+    5. 💡 ***Wskazówka*** Kliknij z wciśniętym klawiszem ***[Ctrl]*** (lub kółkiem myszy), aby otworzyć link w tle i pozostać w panelu.
     
     ---
-    Autor: Mateusz Roman
+    **Autor: Mateusz Roman**
     """)
 
+# --- CREATOR PAGE ---
+elif selected_section == "Kreator Huba":
+    st.title("🧩 Kreator Huba")
+    st.info("Zarządzaj strukturą aplikacji. Nieaktywne elementy znikają z nawigacji, ale zostają w bazie.")
+
+    tab_sections, tab_tools, tab_import = st.tabs(["📁 Sekcje", "🛠️ Narzędzia", "📥 Import"])
+
+    with tab_import:
+        st.subheader("Masowy import narzędzi")
+        st.markdown("""
+        Wgraj plik CSV przygotowany w Excelu. 
+                    
+        **Format kolumn:** `Sekcja;Emoji;Nazwa Narzędzia;Opis;URL Template;Parametr`
+        """)
+        
+        uploaded_file = st.file_uploader("Wybierz plik CSV", type="csv")
+        
+        if uploaded_file is not None:
+            if st.button("🚀 Rozpocznij import"):
+                success = db_client.import_from_csv(uploaded_file)
+                if success:
+                    st.success("Dane zostały zaimportowane pomyślnie!")
+                    st.rerun()
+                else:
+                    st.error("Wystąpił błąd podczas importu. Sprawdź czy dane są poprawne.")
+
+    # Pobieramy wszystkie sekcje (również nieaktywne) do zarządzania
+    all_sections_admin = db_client.load_all_sections()
+
+    with tab_sections:
+        st.subheader("➕ Dodaj nową sekcję")
+        with st.form("add_section_form", clear_on_submit=True):
+            col1, col2 = st.columns([3, 1])
+            new_name = col1.text_input("Nazwa sekcji")
+            new_emoji = col2.text_input("Emoji", value="📁")
+            if st.form_submit_button("Dodaj sekcję"):
+                if new_name:
+                    db_client.add_section(new_name, new_emoji)
+                    st.success("Dodano sekcję!")
+                    st.rerun()
+
+        st.divider()
+        st.subheader("✏️ Edytuj istniejące sekcje")
+        
+        for s in all_sections_admin:
+            status_suffix = "" if s['is_active'] else "(❌ NIEAKTYWNA)"
+            with st.expander(f"{s['emoji']} {s['name']}{status_suffix}"):
+                edit_name = st.text_input("Nazwa", value=s['name'], key=f"sec_n_{s['id']}")
+                edit_emoji = st.text_input("Emoji", value=s['emoji'], key=f"sec_e_{s['id']}")
+                # Pobieramy realny stan z bazy (value=bool(s['is_active']))
+                is_active = st.checkbox("Widoczna w nawigacji (Aktywna)", value=bool(s['is_active']), key=f"sec_a_{s['id']}")
+                
+                col_save, col_del = st.columns(2)
+                with col_save:
+                    if st.button("Zapisz zmiany", key=f"save_s_{s['id']}", type="primary"):
+                        db_client.update_section(s['id'], edit_name, edit_emoji, is_active)
+                        st.success("Zapisano!")
+                        st.rerun()
+                        
+                with col_del:
+                    with st.popover("🗑️ USUŃ TRWALE"):
+                        st.error("UWAGA: Usunięcie sekcji skasuje też wszystkie jej narzędzia!")
+                        if st.button("POTWIERDZAM USUNIĘCIE", key=f"conf_del_s_{s['id']}"):
+                            db_client.delete_section_hard(s['id'])
+                            st.rerun()
+
+    with tab_tools:
+        st.subheader("➕ Dodaj nowe narzędzie")
+        with st.form("add_tool_form", clear_on_submit=True):
+            # Wybieramy tylko spośród aktywnych sekcji przy dodawaniu, lub wszystkich - wg uznania
+            target_section = st.selectbox("Wybierz sekcję", options=[s['name'] for s in all_sections_admin])
+            t_name = st.text_input("Nazwa narzędzia")
+            t_desc = st.text_area("Opis")
+            t_url = st.text_input("URL Template (użyj {} dla parametru)")
+            t_type = st.selectbox("Typ parametru", ["ip", "domain", "both", "none"])
+            
+            if st.form_submit_button("Dodaj narzędzie"):
+                sec_id = next(s['id'] for s in all_sections_admin if s['name'] == target_section)
+                db_client.add_tool(sec_id, t_name, t_desc, t_url, t_type)
+                st.success("Narzędzie dodane!")
+                st.rerun()
+
+        st.divider()
+        st.subheader("✏️ Zarządzaj narzędziami")
+        
+        # Filtrowanie narzędzi
+        if all_sections_admin:
+            filter_sec = st.selectbox("Wybierz sekcję do edycji narzędzi", options=[s['name'] for s in all_sections_admin])
+            tools_to_edit = db_client.load_all_tools_for_section(filter_sec)
+
+            for t in tools_to_edit:
+                t_status = "" if t['is_active'] else " ❌ (UKRYTE)"
+                with st.expander(f"🛠️ {t['name']}{t_status}"):
+                    edit_t_name = st.text_input("Nazwa", value=t['name'], key=f"t_n_{t['id']}")
+                    edit_t_desc = st.text_area("Opis", value=t['description'], key=f"t_d_{t['id']}")
+                    edit_t_url = st.text_input("URL Template", value=t['url_template'], key=f"t_u_{t['id']}")
+                    edit_t_type = st.selectbox("Typ parametru", ["ip", "domain", "both", "none"], 
+                                              index=["ip", "domain", "both", "none"].index(t['param_type']), 
+                                              key=f"t_t_{t['id']}")
+                    edit_t_active = st.checkbox("Narzędzie aktywne", value=bool(t['is_active']), key=f"t_a_{t['id']}")
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("Zapisz", key=f"t_save_{t['id']}", type="primary"):
+                            db_client.update_tool(t['id'], edit_t_name, edit_t_desc, edit_t_url, edit_t_type, edit_t_active)
+                            st.success("Zapisano!")
+                            st.rerun()
+                    with c2:
+                        with st.popover("🗑️ USUŃ"):
+                            if st.button("POTWIERDZAM USUNIĘCIE", key=f"t_del_{t['id']}"):
+                                db_client.delete_tool_hard(t['id'])
+                                st.rerun()
+        else:
+            st.warning("Najpierw dodaj jakąś sekcję!")
+
+            
 # --- STRONY TEMATYCZNE ---
 else:
-    # Tytuł sekcji
-    st.title(selected_section)
+    current_emoji = full_emoji_map.get(selected_section, "📁")
+    st.title(f"{current_emoji} {selected_section}")
     st.markdown("---")
+    
+    # Teraz db_client otrzyma "DNS & Whois", co pasuje do bazy danych
+    tools_list = db_client.load_tools_for_section(selected_section)
 
     # Pola wejściowe dla IP i Domeny
     st.subheader("Wprowadź parametry")
@@ -202,9 +209,6 @@ else:
     st.markdown("---")
     st.subheader(f"Dostępne narzędzia w wybranej sekcji:")
 
-    # Iteracja po narzędziach i wyświetlanie interfejsu
-    tools_list = TOOLS_DB[selected_section]
-
     for tool in tools_list:
         # Kontener dla każdego narzędzia
         with st.container(border=True):
@@ -212,12 +216,33 @@ else:
             col_desc, col_preview, col_action = st.columns([3, 4, 1.5])
 
             with col_desc:
-                st.markdown(f"### {section_emoji[selected_section]} {tool['name']}")
-                st.caption(tool['desc'])
-                # Informacja, jakiego parametru oczekuje narzędzie
+                st.markdown(f"### {current_emoji} {tool['name']}")
+                st.caption(tool['description'])
+                
+                #Logika kolorów i nazw dla parametrów
                 req_param = tool['param_type']
-                badge_color = "blue" if req_param == "ip" else "green" if req_param == "domain" else "orange"
-                st.markdown(f":{badge_color}[Wymaga: {req_param.upper()}]")
+
+                # Słownik tłumaczeń
+                param_labels = {
+                    "ip": "IP",
+                    "domain": "DOMENA",
+                    "both": "OBA",
+                    "none": "BRAK"
+                }
+
+                # Pobieramy polską nazwę, jeśli nie znajdzie - używamy dużej litery z bazy
+                display_label = param_labels.get(req_param, req_param.upper())
+
+                if req_param == "ip":
+                    badge_color = "blue"
+                elif req_param == "domain":
+                    badge_color = "green"
+                elif req_param == "both":
+                    badge_color = "orange"
+                else: # czyli dla 'none'
+                    badge_color = "gray"
+
+                st.markdown(f":{badge_color}[Przyjmuje: {display_label}]")
 
             # --- Logika generowania linku ---
             generated_url = None

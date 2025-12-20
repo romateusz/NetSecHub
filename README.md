@@ -11,6 +11,8 @@
 * **🦠 Threat Intelligence:** Integracja z AbuseIPDB, VirusTotal oraz Cisco Talos.
 * **📡 Skanowanie i OSINT:** Błyskawiczne przejście do wyników Shodan, Censys i CRT.sh.
 * **🏢 Rejestry Internetowe (RIR):** Weryfikacja właścicieli, jurysdykcji i danych kontaktowych adresów IP w globalnych bazach.
+* **🧩 Kreator Huba** Zarządzanie strukturą aplikacji. Umożliwia deeaktywacje elementów, któr znikają z menu nawigacji, ale zostają w bazie.
+* **📥 Szybki Import** Umożliwia szybki import i zmianę sekcji oraz narzędzi.
 * **⚙️ Dynamiczne parametry:** Wszystkie linki generują się automatycznie.
 * **🎨 Nowoczesny UI:** Responsywne przyciski, komunikaty i czytelny podgląd generowanych linków.
 

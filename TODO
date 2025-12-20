@@ -1,0 +1,2 @@
+1. Sprawdzać przy tworzeniu i imporcie, czy istnieje już narzędzie o dokładnie tej samej nazwie.
+2. Jeżeli najedzie się na przycisk, który jest nieakytny: "Oczekiwanie...", to nie działa na nim hover, dopóki nie zostaną wproawdzone parametry.
