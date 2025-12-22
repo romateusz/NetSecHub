@@ -67,7 +67,7 @@ Po poprawnym uruchomieniu skryptu, aplikacja będzie dostępna w przeglądarce p
 
 ## Licencja
 
-Projekt jest udostępniony na licencji MIT – szczegóły znajdują się w pliku [LICENSE](LICENSE).
+Szczegóły znajdują się w pliku [LICENSE](LICENSE).
 
 
 ## Zastrzeżenie prawne
