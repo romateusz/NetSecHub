@@ -46,6 +46,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.info("💡 ***Wskazówka:*** Ctrl + LPM otwiera narzędzia w tle.")
+    st.info("💡 ***Wskazówka:*** Nieaktywne elementy znikają z nawigacji, ale zostają w bazie.")
     
 
 
@@ -74,28 +75,34 @@ if selected_section == "Landing Page":
 # --- CREATOR PAGE ---
 elif selected_section == "Kreator Huba":
     st.title("🧩 Kreator Huba")
-    st.info("Zarządzaj strukturą aplikacji. Nieaktywne elementy znikają z nawigacji, ale zostają w bazie.")
+    st.info("Zarządzaj strukturą aplikacji. Dodawaj, edytuj, importuj lub usuwaj sekcje i narzędzia.")
 
     tab_sections, tab_tools, tab_import = st.tabs(["📁 Sekcje", "🛠️ Narzędzia", "📥 Import"])
 
     with tab_import:
         st.subheader("Masowy import narzędzi")
         st.markdown("""
-        Wgraj plik CSV przygotowany w Excelu. 
-                    
-        **Format kolumn:** `Sekcja;Emoji;Nazwa Narzędzia;Opis;URL Template;Parametr`
+        Wgraj plik CSV przygotowany w Excelu. **Format kolumn:** `Sekcja;Emoji;Nazwa Narzędzia;Opis;URL Template;Parametr`
         """)
         
         uploaded_file = st.file_uploader("Wybierz plik CSV", type="csv")
         
         if uploaded_file is not None:
             if st.button("🚀 Rozpocznij import"):
-                success = db_client.import_from_csv(uploaded_file)
+                # Odbieramy teraz dwa parametry: status i listę pominiętych
+                success, skipped = db_client.import_from_csv(uploaded_file)
+                
                 if success:
-                    st.success("Dane zostały zaimportowane pomyślnie!")
-                    st.rerun()
+                    if skipped:
+                        st.warning(f"Import zakończony. Pominięto istniejące duplikaty: {', '.join(skipped)}")
+                    else:
+                        st.success("Wszystkie narzędzia zostały zaimportowane pomyślnie!")
+                    
+                    # Przycisk do przeładowania, aby użytkownik zdążył przeczytać warning
+                    if st.button("Odśwież widok"):
+                        st.rerun()
                 else:
-                    st.error("Wystąpił błąd podczas importu. Sprawdź czy dane są poprawne.")
+                    st.error("Wystąpił błąd podczas importu. Sprawdź strukturę pliku CSV.")
 
     # Pobieramy wszystkie sekcje (również nieaktywne) do zarządzania
     all_sections_admin = db_client.load_all_sections()
@@ -116,7 +123,7 @@ elif selected_section == "Kreator Huba":
         st.subheader("✏️ Edytuj istniejące sekcje")
         
         for s in all_sections_admin:
-            status_suffix = "" if s['is_active'] else "(❌ NIEAKTYWNA)"
+            status_suffix = "" if s['is_active'] else " (❌NIEAKTYWNA)"
             with st.expander(f"{s['emoji']} {s['name']}{status_suffix}"):
                 edit_name = st.text_input("Nazwa", value=s['name'], key=f"sec_n_{s['id']}")
                 edit_emoji = st.text_input("Emoji", value=s['emoji'], key=f"sec_e_{s['id']}")
@@ -133,32 +140,53 @@ elif selected_section == "Kreator Huba":
                 with col_del:
                     with st.popover("🗑️ USUŃ TRWALE"):
                         st.error("UWAGA: Usunięcie sekcji skasuje też wszystkie jej narzędzia!")
-                        if st.button("POTWIERDZAM USUNIĘCIE", key=f"conf_del_s_{s['id']}"):
-                            db_client.delete_section_hard(s['id'])
-                            st.rerun()
+                        c_left, c_mid, c_right = st.columns([1, 5, 1])
+                        with c_mid:
+                            if st.button("POTWIERDZAM USUNIĘCIE", key=f"conf_del_s_{s['id']}", use_container_width=True):
+                                db_client.delete_section_hard(s['id'])
+                                st.rerun()
 
     with tab_tools:
         st.subheader("➕ Dodaj nowe narzędzie")
         with st.form("add_tool_form", clear_on_submit=True):
-            # Wybieramy tylko spośród aktywnych sekcji przy dodawaniu, lub wszystkich - wg uznania
-            target_section = st.selectbox("Wybierz sekcję", options=[s['name'] for s in all_sections_admin])
+            sec_names = [s['name'] for s in all_sections_admin]
+            sec_emojis = {s['name']: s['emoji'] for s in all_sections_admin}
+
+            target_section = st.selectbox(
+                "Wybierz sekcję", 
+                options=sec_names,
+                format_func=lambda x: f"{sec_emojis.get(x, '📁')} {x}",
+                key="add_tool_selectbox"
+            )
+
             t_name = st.text_input("Nazwa narzędzia")
             t_desc = st.text_area("Opis")
             t_url = st.text_input("URL Template (użyj {} dla parametru)")
             t_type = st.selectbox("Typ parametru", ["ip", "domain", "both", "none"])
-            
+
             if st.form_submit_button("Dodaj narzędzie"):
-                sec_id = next(s['id'] for s in all_sections_admin if s['name'] == target_section)
-                db_client.add_tool(sec_id, t_name, t_desc, t_url, t_type)
-                st.success("Narzędzie dodane!")
-                st.rerun()
+                    sec_id = next(s['id'] for s in all_sections_admin if s['name'] == target_section)
+                    
+                    # Sprawdzamy czy duplikat przed dodaniem
+                    if db_client.tool_exists(t_name, sec_id):
+                        st.error(f"Narzędzie o nazwie '{t_name}' już istnieje w sekcji '{target_section}'!")
+                    else:
+                        db_client.add_tool(sec_id, t_name, t_desc, t_url, t_type)
+                        st.success("Narzędzie dodane!")
+                        st.rerun()
 
         st.divider()
         st.subheader("✏️ Zarządzaj narzędziami")
         
         # Filtrowanie narzędzi
         if all_sections_admin:
-            filter_sec = st.selectbox("Wybierz sekcję do edycji narzędzi", options=[s['name'] for s in all_sections_admin])
+            filter_sec = st.selectbox(
+                "Wybierz sekcję do edycji narzędzi", 
+                options=sec_names,
+                format_func=lambda x: f"{sec_emojis.get(x, '📁')} {x}",
+                key="manage_tool_selectbox"
+            )
+
             tools_to_edit = db_client.load_all_tools_for_section(filter_sec)
 
             for t in tools_to_edit:
@@ -180,9 +208,12 @@ elif selected_section == "Kreator Huba":
                             st.rerun()
                     with c2:
                         with st.popover("🗑️ USUŃ"):
-                            if st.button("POTWIERDZAM USUNIĘCIE", key=f"t_del_{t['id']}"):
-                                db_client.delete_tool_hard(t['id'])
-                                st.rerun()
+                            st.error("UWAGA: Usunięcie narzędzia jest nieodwracalne.")
+                            ct_left, ct_mid, ct_right = st.columns([1, 5, 1])
+                            with ct_mid:
+                                if st.button("POTWIERDZAM USUNIĘCIE", key=f"t_del_{t['id']}", use_container_width=True):
+                                    db_client.delete_tool_hard(t['id'])
+                                    st.rerun()
         else:
             st.warning("Najpierw dodaj jakąś sekcję!")
 
@@ -213,7 +244,7 @@ else:
         # Kontener dla każdego narzędzia
         with st.container(border=True):
             # Układ kolumn: Nazwa/Opis | Podgląd Linku | Przycisk Akcji
-            col_desc, col_preview, col_action = st.columns([3, 4, 1.5])
+            col_desc, col_preview, col_action = st.columns([3, 4, 1.5], vertical_alignment="center")
 
             with col_desc:
                 st.markdown(f"### {current_emoji} {tool['name']}")

@@ -77,22 +77,30 @@ class DBClient:
         conn.close()
 
 
-    # Wewnątrz klasy DBClient:
+    def tool_exists(self, name, section_id):
+        """Sprawdza, czy w danej sekcji istnieje już narzędzie o takiej nazwie."""
+        conn = self.get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM tools WHERE name = ? AND section_id = ?", (name, section_id))
+        exists = cur.fetchone() is not None
+        conn.close()
+        return exists
+
+
     def import_from_csv(self, file_content):
-        """Importuje dane z pliku CSV (format: Sekcja;Emoji;Nazwa;Opis;URL;Parametr)"""
-        # Dekodujemy zawartość pliku przesłanego przez Streamlit
+        """Importuje dane z CSV, pomijając duplikaty w obrębie tej samej sekcji."""
         decoded_file = file_content.getvalue().decode("utf-8").splitlines()
         reader = csv.DictReader(decoded_file, delimiter=';')
         
         conn = self.get_connection()
         cur = conn.cursor()
+        skipped_tools = []
         
         try:
             for row in reader:
-                # 1. Sprawdź czy sekcja istnieje, jeśli nie - dodaj ją
+                # 1. Sprawdź/Dodaj sekcję
                 cur.execute("SELECT id FROM sections WHERE name = ?", (row['Sekcja'],))
                 res = cur.fetchone()
-                
                 if res:
                     section_id = res['id']
                 else:
@@ -100,17 +108,26 @@ class DBClient:
                                 (row['Sekcja'], row['Emoji'], 0))
                     section_id = cur.lastrowid
                 
-                # 2. Dodaj narzędzie do tej sekcji
+                # 2. SPRAWDZENIE DUPLIKATU
+                # Sprawdzamy, czy w tej sekcji jest już narzędzie o tej samej nazwie
+                cur.execute("SELECT id FROM tools WHERE name = ? AND section_id = ?", 
+                            (row['Nazwa Narzędzia'], section_id))
+                
+                if cur.fetchone():
+                    skipped_tools.append(f"{row['Nazwa Narzędzia']} ({row['Sekcja']})")
+                    continue # Przejdź do następnego rekordu bez dodawania
+                
+                # 3. Dodaj narzędzie
                 cur.execute("""
                     INSERT INTO tools (section_id, name, description, url_template, param_type, order_index)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (section_id, row['Nazwa Narzędzia'], row['Opis'], row['URL Template'], row['Parametr'], 0))
                 
             conn.commit()
-            return True
+            return True, skipped_tools
         except Exception as e:
             print(f"Błąd importu: {e}")
-            return False
+            return False, []
         finally:
             conn.close()
 
