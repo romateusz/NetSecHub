@@ -20,10 +20,10 @@ if (!(Get-Command uv -ErrorAction SilentlyContinue)) {
 
 # Pierwsze uruchomienie – instalacja zależności
 if (!(Test-Path ".venv")) {
-    Write-Info "Pierwsze uruchomienie – instaluję zależności..."
+    Write-Host "[INFO] Pierwsze uruchomienie – instaluję zależności..." -ForegroundColor Yellow
     uv sync
 }
 
 # Uruchom aplikację
-Write-Info "Startuję NetSecHub..."
-uv run streamlit run NetSecHub.py
+Write-Host "[INFO] Startuję NetSecHub..." -ForegroundColor Cyan
+uv run streamlit run ./src/NetSecHub.py

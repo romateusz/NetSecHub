@@ -1,8 +1,29 @@
 from pathlib import Path
 import streamlit as st
+import streamlit.components.v1 as components
 import sqlite3
 import markdownStyle as mdS
 import DBClient
+import ipaddress
+
+if 'history' not in st.session_state:
+    st.session_state.history = []
+
+# Globalne "źródło prawdy"
+if 'input_ip_val' not in st.session_state:
+    st.session_state.input_ip_val = ""
+if 'input_dom_val' not in st.session_state:
+    st.session_state.input_dom_val = ""
+
+# Klucze konkretnych widgetów
+for key in ["lp_ip_input", "lp_dom_input", "sec_ip_input", "sec_dom_input"]:
+    if key not in st.session_state:
+        st.session_state[key] = ""
+
+def add_to_history(value):
+    if value and value not in st.session_state.history:
+        st.session_state.history.insert(0, value)
+        st.session_state.history = st.session_state.history[:10]
 
 # =====================
 # KONFIGURACJA STRONY
@@ -16,7 +37,8 @@ st.set_page_config(
 
 mdS.apply_custom_styles()
 
-DB_PATH = Path("netsechub.db")
+BASE_DIR = Path(__file__).parent
+DB_PATH = BASE_DIR / "netsechub.db"
 db_client = DBClient.DBClient(DB_PATH)
 
 
@@ -26,28 +48,63 @@ db_client = DBClient.DBClient(DB_PATH)
 with st.sidebar:
     st.title("🛡️ NetSec Hub")
     st.markdown("---")
+    st.markdown("**🧭 Nawigacja:**") 
     
-    # Pobieramy sekcje z bazy
     sections = db_client.load_sections()
-    
-    # Tworzymy mapę emoji dla wszystkich opcji
     full_emoji_map = {s["name"]: s["emoji"] for s in sections}
     full_emoji_map["Landing Page"] = "🏠"
     full_emoji_map["Kreator Huba"] = "🧩"
     
-    # Lista opcji zawiera czyste nazwy
     clean_options = ["Landing Page"] + [s["name"] for s in sections] + ["Kreator Huba"]
     
+    if 'selected_section' not in st.session_state:
+        st.session_state.selected_section = "Landing Page"
+
+    try:
+        current_index = clean_options.index(st.session_state.selected_section)
+    except ValueError:
+        current_index = 0
+
     selected_section = st.radio(
-        "Nawigacja:", 
-        clean_options, 
-        format_func=lambda x: f"{full_emoji_map.get(x, '📁')} {x}"
+        label="Nawigacja",
+        options=clean_options, 
+        index=current_index,
+        format_func=lambda x: f"{full_emoji_map.get(x, '📁')} {x}",
+        key="navigation_radio",
+        label_visibility="collapsed"
     )
+    st.session_state.selected_section = selected_section
+    st.markdown("---")
+
+    st.markdown("**🕒 Ostatnie wyszukiwania:**") 
+    if st.session_state.history:
+        for item in st.session_state.history:
+            if st.button(f"🔗 {item}", key=f"hist_{item}", use_container_width=True):
+                is_ip = False
+                try:
+                    ipaddress.ip_address(item)
+                    is_ip = True
+                except ValueError:
+                    is_ip = False
+
+                if is_ip:
+                    st.session_state.input_ip_val = item
+                else:
+                    st.session_state.input_dom_val = item
+
+                st.session_state["lp_ip_input"] = st.session_state.input_ip_val
+                st.session_state["sec_ip_input"] = st.session_state.input_ip_val
+                st.session_state["lp_dom_input"] = st.session_state.input_dom_val
+                st.session_state["sec_dom_input"] = st.session_state.input_dom_val
+                
+                st.session_state.selected_section = "Landing Page"
+                st.rerun()
+    else:
+        st.caption("Brak historii.")
     
     st.markdown("---")
     st.info("💡 ***Wskazówka:*** Ctrl + LPM otwiera narzędzia w tle.")
     st.info("💡 ***Wskazówka:*** Nieaktywne elementy znikają z nawigacji, ale zostają w bazie.")
-    
 
 
 # ========================
@@ -58,19 +115,22 @@ with st.sidebar:
 if selected_section == "Landing Page":
     st.title("Witaj w NetSec Hub")
     st.markdown("""
-    To narzędzie agreguje przydatne serwisy zewnętrzne służące do analizy sieciowej, 
-    rekonesansu (OSINT) i threat intelligence.
-    
+    To narzędzie agreguje przydatne serwisy zewnętrzne służące do analizy sieciowej.
+                
+    ---
+                
     ### Jak używać?
-    1. **Wybierz kategorię** z menu po lewej stronie (np. *DNS & Whois*).
+    1. **Wybierz sekcję** z menu nawigacyjnego po lewej stronie (np. *DNS & Whois*).
     2. **Wpisz parametry** na górze strony (Adres IP lub Domenę).
     3. Przejrzyj listę dostępnych narzędzi.
-    4. Kliknij **"Otwórz ↗️"**, aby uruchomić narzędzie z wpisanymi parametrami w nowej karcie.
+    4. Kliknij **"Otwórz ↗️"** lub **"Otwórz wszystkie aktywne ↗️"**, aby uruchomić narzędzia z wpisanymi parametrami w nowej karcie.
     5. 💡 ***Wskazówka*** Kliknij z wciśniętym klawiszem ***[Ctrl]*** (lub kółkiem myszy), aby otworzyć link w tle i pozostać w panelu.
     
     ---
     **Autor: Mateusz Roman**
     """)
+
+    
 
 # --- CREATOR PAGE ---
 elif selected_section == "Kreator Huba":
@@ -89,7 +149,6 @@ elif selected_section == "Kreator Huba":
         
         if uploaded_file is not None:
             if st.button("🚀 Rozpocznij import"):
-                # Odbieramy teraz dwa parametry: status i listę pominiętych
                 success, skipped = db_client.import_from_csv(uploaded_file)
                 
                 if success:
@@ -97,14 +156,12 @@ elif selected_section == "Kreator Huba":
                         st.warning(f"Import zakończony. Pominięto istniejące duplikaty: {', '.join(skipped)}")
                     else:
                         st.success("Wszystkie narzędzia zostały zaimportowane pomyślnie!")
-                    
-                    # Przycisk do przeładowania, aby użytkownik zdążył przeczytać warning
+
                     if st.button("Odśwież widok"):
                         st.rerun()
                 else:
                     st.error("Wystąpił błąd podczas importu. Sprawdź strukturę pliku CSV.")
 
-    # Pobieramy wszystkie sekcje (również nieaktywne) do zarządzania
     all_sections_admin = db_client.load_all_sections()
 
     with tab_sections:
@@ -127,7 +184,6 @@ elif selected_section == "Kreator Huba":
             with st.expander(f"{s['emoji']} {s['name']}{status_suffix}"):
                 edit_name = st.text_input("Nazwa", value=s['name'], key=f"sec_n_{s['id']}")
                 edit_emoji = st.text_input("Emoji", value=s['emoji'], key=f"sec_e_{s['id']}")
-                # Pobieramy realny stan z bazy (value=bool(s['is_active']))
                 is_active = st.checkbox("Widoczna w nawigacji (Aktywna)", value=bool(s['is_active']), key=f"sec_a_{s['id']}")
                 
                 col_save, col_del = st.columns(2)
@@ -166,14 +222,9 @@ elif selected_section == "Kreator Huba":
 
             if st.form_submit_button("Dodaj narzędzie"):
                     sec_id = next(s['id'] for s in all_sections_admin if s['name'] == target_section)
-                    
-                    # Sprawdzamy czy duplikat przed dodaniem
-                    if db_client.tool_exists(t_name, sec_id):
-                        st.error(f"Narzędzie o nazwie '{t_name}' już istnieje w sekcji '{target_section}'!")
-                    else:
-                        db_client.add_tool(sec_id, t_name, t_desc, t_url, t_type)
-                        st.success("Narzędzie dodane!")
-                        st.rerun()
+                    db_client.add_tool(sec_id, t_name, t_desc, t_url, t_type)
+                    st.success("Narzędzie dodane!")
+                    st.rerun()
 
         st.divider()
         st.subheader("✏️ Zarządzaj narzędziami")
@@ -223,19 +274,53 @@ else:
     current_emoji = full_emoji_map.get(selected_section, "📁")
     st.title(f"{current_emoji} {selected_section}")
     st.markdown("---")
-    
-    # Teraz db_client otrzyma "DNS & Whois", co pasuje do bazy danych
     tools_list = db_client.load_tools_for_section(selected_section)
+
+    # Obsługa wartości z historii
+    default_ip = st.session_state.get('input_ip_val', "")
+    default_dom = st.session_state.get('input_dom_val', "")
 
     # Pola wejściowe dla IP i Domeny
     st.subheader("Wprowadź parametry")
     col_input1, col_input2 = st.columns(2)
-    
+
     with col_input1:
-        input_ip = st.text_input("Adres IP (IPv4/IPv6):", placeholder="np. 8.8.8.8").strip()
+        input_ip = st.text_input("Adres IP:", key="sec_ip_input").strip()
+        
+        if input_ip != st.session_state.input_ip_val:
+            st.session_state.input_ip_val = input_ip
+            st.session_state["lp_ip_input"] = input_ip
+            add_to_history(input_ip)
+
     with col_input2:
-        raw_domain = st.text_input("Nazwa Domeny:", placeholder="np. example.com").strip()
-        input_domain = raw_domain.replace("https://", "").replace("http://", "").split("/")[0]
+        raw_domain = st.text_input("Nazwa Domeny:", key="sec_dom_input").strip()
+        input_domain = (raw_domain.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0].lower())
+        
+        if input_domain != st.session_state.input_dom_val:
+            st.session_state.input_dom_val = input_domain
+            st.session_state["lp_dom_input"] = input_domain
+            add_to_history(input_domain)
+
+    # --- BULK OPEN ---
+    urls_to_open = []
+    for t in tools_list:
+        # Logika generowania linku
+        url = None
+        if t['param_type'] == 'none': url = t['url_template']
+        elif t['param_type'] == 'ip' and input_ip: url = t['url_template'].format(input_ip)
+        elif t['param_type'] == 'domain' and input_domain: url = t['url_template'].format(input_domain)
+        elif t['param_type'] == 'both':
+            if input_ip: url = t['url_template'].format(input_ip)
+            elif input_domain: url = t['url_template'].format(input_domain)
+        
+        if url: urls_to_open.append(url)
+
+    if urls_to_open:
+        if st.button(f"Otwórz wszystkie aktywne ({len(urls_to_open)}) ↗️", use_container_width=True):
+            # Trick JavaScript do otwarcia wielu kart
+            js_code = "".join([f"window.open('{u}', '_blank');" for u in urls_to_open])
+            components.html(f"<script>{js_code}</script>", height=0)
+            st.info("Zezwól na wyskakujące okienka (pop-ups) w przeglądarce, aby otworzyć wszystkie karty.")
 
     st.markdown("---")
     st.subheader(f"Dostępne narzędzia w wybranej sekcji:")
@@ -250,7 +335,7 @@ else:
                 st.markdown(f"### {current_emoji} {tool['name']}")
                 st.caption(tool['description'])
                 
-                #Logika kolorów i nazw dla parametrów
+                # Logika kolorów i nazw dla parametrów
                 req_param = tool['param_type']
 
                 # Słownik tłumaczeń
@@ -261,7 +346,6 @@ else:
                     "none": "BRAK"
                 }
 
-                # Pobieramy polską nazwę, jeśli nie znajdzie - używamy dużej litery z bazy
                 display_label = param_labels.get(req_param, req_param.upper())
 
                 if req_param == "ip":
@@ -270,7 +354,7 @@ else:
                     badge_color = "green"
                 elif req_param == "both":
                     badge_color = "orange"
-                else: # czyli dla 'none'
+                else:
                     badge_color = "gray"
 
                 st.markdown(f":{badge_color}[Przyjmuje: {display_label}]")
@@ -279,29 +363,33 @@ else:
             generated_url = None
             ready_to_launch = False
             
-            # Sprawdza, czy mamy odpowiednie dane dla danego narzędzia
-            if tool['param_type'] == 'none':
-                 generated_url = tool['url_template']
-                 ready_to_launch = True
-            elif tool['param_type'] == 'ip' and input_ip:
-                 generated_url = tool['url_template'].format(input_ip)
-                 ready_to_launch = True
-            elif tool['param_type'] == 'domain' and input_domain:
-                 generated_url = tool['url_template'].format(input_domain)
-                 ready_to_launch = True
-            elif tool['param_type'] == 'both':
-                # Dla 'both' priorytet ma IP, jeśli podano oba
-                if input_ip:
-                     generated_url = tool['url_template'].format(input_ip)
-                     ready_to_launch = True
-                elif input_domain:
-                     generated_url = tool['url_template'].format(input_domain)
-                     ready_to_launch = True
+            # Sprawdza, czy odpowiednie dane dla danego narzędzia
+            try:
+                if tool['param_type'] == 'none':
+                    generated_url = tool['url_template']
+                    ready_to_launch = True
+                elif tool['param_type'] == 'ip' and input_ip:
+                    generated_url = tool['url_template'].format(input_ip)
+                    ready_to_launch = True
+                elif tool['param_type'] == 'domain' and input_domain:
+                    generated_url = tool['url_template'].format(input_domain)
+                    ready_to_launch = True
+                elif tool['param_type'] == 'both':
+                    # Dla 'both' priorytet ma IP, jeśli podano oba
+                    if input_ip:
+                        generated_url = tool['url_template'].format(input_ip)
+                        ready_to_launch = True
+                    elif input_domain:
+                        generated_url = tool['url_template'].format(input_domain)
+                        ready_to_launch = True
+            except IndexError:
+                # Jeśli w URL Template brakuje {}
+                generated_url = "BŁĄD: Brak {} w szablonie URL"
+                ready_to_launch = False
 
             with col_preview:
                 if ready_to_launch and generated_url:
                     st.markdown("**Podgląd linku:**")
-                    # Wyświetla skrócony link, żeby nie zajmował za dużo miejsca
                     st.code(generated_url, language="http")
                 elif not input_ip and not input_domain:
                     st.warning("⬆️ Wpisz parametry na górze strony.")
@@ -309,9 +397,6 @@ else:
                     st.error(f"Brak wymaganego parametru: {tool['param_type'].upper()}")
 
             with col_action:
-                st.markdown(" ") 
-                st.markdown(" ")
-                
                 # Unikalny klucz potrzebny dla zwykłego przycisku
                 unique_key = f"wait_btn_{tool['name'].replace(' ', '_')}"
 

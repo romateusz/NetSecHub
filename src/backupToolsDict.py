@@ -1,6 +1,6 @@
-# =====================
-# BAZA DANYCH NARZĘDZI 
-# =====================
+# ==================
+# NARZĘDZIA STARTOWE
+# ==================
 # Klucz słownika to nazwa sekcji w menu.
 # Wartość to lista narzędzi w tej sekcji.
 # 'url_template': Użyj {}, gdzie ma zostać wstawiony parametr (IP lub Domena)
@@ -24,7 +24,7 @@ TOOLS_DB = {
             "name": "Who.is",
             "desc": "Standardowe sprawdzenie WHOIS.",
             "url_template": "https://who.is/whois/{}",
-            "param_type": "both",
+            "param_type": "domain",
         },
     ],
     "🦠 Threat Intelligence": [

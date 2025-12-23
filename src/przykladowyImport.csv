@@ -1,0 +1,7 @@
+Sekcja;Emoji;Nazwa Narzedzi;Opis;URL Template;Parametr
+Code Repositories;📚;NetSecHub;Link do repozytorium NetSecHuba;https://github.com/romateusz/NetSecHub;none
+Threat Intelligence;🐛;Spamhaus;Sprawdza reputację domen i adresow IP pod kątem spamu, malware i botnetów;https://check.spamhaus.org/results?query={};both
+Linki;🔗;WireShark;Pozwala na dogłębna analizę ruchu sieciowego;https://www.wireshark.org/;none
+Linki;🔗;Zaproxy;Wykrywa podatności bezpieczeństwa w aplikacjach internetowych podczas ich tworzenia i testowania;https://www.zaproxy.org/;none
+Linki;🔗;OverTheWire;Zadania do nauki cyberbezpieczenstwa;https://overthewire.org/;none
+Linki;🔗;HackTheBox;Środowisko do treningu ataków i obrony;https://www.hackthebox.com/;none

@@ -17,4 +17,4 @@ fi
 
 # Uruchom aplikację
 echo "[INFO] Startuję NetSecHub..."
-uv run streamlit run NetSecHub.py
+uv run streamlit run ./src/NetSecHub.py

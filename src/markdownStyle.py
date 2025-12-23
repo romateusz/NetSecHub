@@ -10,23 +10,15 @@ def apply_custom_styles():
             text-decoration: none !important;
         }
 
-        /* STYLE DLA PRZYCISKÓW STANDARDOWYCH (Otwórz, Zapisz, Dodaj) */
-        /* Link Button (Otwórz) */
-        div[data-testid="stLinkButton"] a {
-            background-color: #e0f2f7 !important;
-            color: #000000 !important;
-            border: 1px solid #add8e6 !important;
-        }
-
-        /* Standardowy Button */
+        /* STYLE DLA PRZYCISKÓW STANDARDOWYCH (Otwórz, Zapisz, Dodaj, Otwórz Wszystkie) */
+        div[data-testid="stLinkButton"] a, 
         button[data-testid^="stBaseButton"] {
-            background-color: #f0f2f6 !important;
+            background-color: #e0f2f7 !important; /* Ten sam jasnoniebieski */
             color: #000000 !important;
-            border: 1px solid #d1d1d1 !important;
+            border: 1px solid #add8e6 !important; /* Ta sama jasnoniebieska ramka */
         }
 
         /* EFEKT HOVER DLA PRZYCISKÓW AKTYWNYCH (Niebieski + Powiększenie) */
-        /* Wykluczamy przyciski z Popovera (usuwanie) za pomocą :not */
         div[data-testid="stLinkButton"] a:hover, 
         button[data-testid^="stBaseButton"]:not(:disabled):not(div[data-testid="stPopover"] button):hover {
             background-color: #0F2866 !important;
@@ -35,7 +27,7 @@ def apply_custom_styles():
             border: 1.5px solid #0F2866 !important;
         }
 
-        /* STYLE DLA PRZYCISKÓW "USUŃ TRWALE" (Wewnątrz Popover) */
+        /* STYLE DLA PRZYCISKÓW "USUŃ TRWALE" */
         div[data-testid="stPopover"] button {
             background-color: #ff4b4b !important; /* Czerwony */
             color: white !important;
