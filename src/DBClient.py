@@ -130,6 +130,30 @@ class DBClient:
         except Exception as e:
             print(f"Błąd: {e}")
             return False, []
+        
+    def export_to_csv(self):
+        """Generuje dane CSV ze wszystkich narzędzi w bazie."""
+        import io
+        import csv
+        
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(["Sekcja", "Emoji", "Nazwa Narzędzia", "Opis", "URL Template", "Parametr"])
+        
+        conn = self.get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT s.name, s.emoji, t.name, t.description, t.url_template, t.param_type
+            FROM tools t
+            JOIN sections s ON s.id = t.section_id
+            ORDER BY s.order_index, t.order_index
+        """)
+        
+        for row in cur.fetchall():
+            writer.writerow(list(row))
+            
+        conn.close()
+        return output.getvalue()
 
 
     def load_sections(self):

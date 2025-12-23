@@ -137,7 +137,7 @@ elif selected_section == "Kreator Huba":
     st.title("🧩 Kreator Huba")
     st.info("Zarządzaj strukturą aplikacji. Dodawaj, edytuj, importuj lub usuwaj sekcje i narzędzia.")
 
-    tab_sections, tab_tools, tab_import = st.tabs(["📁 Sekcje", "🛠️ Narzędzia", "📥 Import"])
+    tab_sections, tab_tools, tab_import, tab_export = st.tabs(["📁 Sekcje", "🛠️ Narzędzia", "📥 Import", "📤 Eksport"])
 
     with tab_import:
         st.subheader("Masowy import narzędzi")
@@ -153,7 +153,7 @@ elif selected_section == "Kreator Huba":
                 
                 if success:
                     if skipped:
-                        st.warning(f"Import zakończony. Pominięto istniejące duplikaty: {', '.join(skipped)}")
+                        st.warning(f"Import zakończony. Pominięto istniejące duplikaty: {','.join(skipped)}")
                     else:
                         st.success("Wszystkie narzędzia zostały zaimportowane pomyślnie!")
 
@@ -163,6 +163,24 @@ elif selected_section == "Kreator Huba":
                     st.error("Wystąpił błąd podczas importu. Sprawdź strukturę pliku CSV.")
 
     all_sections_admin = db_client.load_all_sections()
+
+    with tab_export:
+        st.subheader("Eksport narzędzi")
+        st.markdown("""
+        Pobierz aktualną listę wszystkich narzędzi jako plik CSV. 
+        """)
+        
+        csv_data = db_client.export_to_csv()
+        col_btn, col_empty = st.columns([1, 3])
+
+        with col_btn:
+            st.download_button(
+                label="💾 Pobierz aktualną bazę (CSV)",
+                data=csv_data.encode('utf-8-sig'),
+                file_name="netsechub_export.csv",
+                mime="text/csv",
+                use_container_width=False
+            )
 
     with tab_sections:
         st.subheader("➕ Dodaj nową sekcję")
